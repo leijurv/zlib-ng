@@ -1,0 +1,5 @@
+usr/include/*
+usr/lib/*/cmake/zlib-ng/zlib-ng*.cmake
+usr/lib/*/libz-ng.a
+usr/lib/*/libz-ng.so
+usr/lib/*/pkgconfig/zlib-ng.pc

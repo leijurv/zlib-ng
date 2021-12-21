@@ -1,0 +1,60 @@
+#!/usr/bin/make -f
+
+# Output every command that modifies files on the build system.
+#export DH_VERBOSE = 1
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+export DEB_CFLAGS_MAINT_APPEND = -Wall -Wextra
+
+confflags = \
+	-DCMAKE_LIBRARY_PATH=$(DEB_HOST_MULTIARCH) \
+	-DWITH_UNALIGNED=OFF \
+	# EOL
+
+D   = debian/_build
+BNG = $(D)/build-ng
+BZ  = $(D)/build-z
+DNG = $(D)/destdir-ng
+DZ  = $(D)/destdir-z
+
+PKGS_NG = -plibz-ng2 -plibz-ng-dev
+PKGS_Z  = -plibz1 -plibz-dev
+
+%:
+	dh $@ --buildsystem=cmake
+
+override_dh_auto_clean:
+	dh_auto_clean --builddir=$(BNG)
+	dh_auto_clean --builddir=$(BZ)
+
+override_dh_auto_configure:
+	dh_auto_configure --builddir=$(BNG) -- \
+	  $(confflags) \
+	  # EOL
+	dh_auto_configure  --builddir=$(BZ) -- \
+	  $(confflags) \
+	  -DZLIB_COMPAT=ON \
+	  # EOL
+
+override_dh_auto_build:
+	dh_auto_build --builddir=$(BNG)
+	dh_auto_build --builddir=$(BZ)
+
+override_dh_auto_install:
+	dh_auto_install --builddir=$(BNG) --destdir=$(DNG)
+	dh_auto_install --builddir=$(BZ) --destdir=$(DZ)
+
+override_dh_install:
+	dh_install --sourcedir=$(DNG) $(PKGS_NG)
+	dh_install --sourcedir=$(DZ) $(PKGS_Z)
+
+override_dh_auto_test:
+	dh_auto_test --builddir=$(BNG)
+	dh_auto_test --builddir=$(BZ)
+
+override_dh_missing:
+	dh_missing --sourcedir=$(DNG) $(PKGS_NG)
+	dh_missing --sourcedir=$(DZ) $(PKGS_Z)
+
+override_dh_installchangelogs:
+	dh_installchangelogs --no-trim

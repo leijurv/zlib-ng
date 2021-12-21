@@ -1,0 +1,10 @@
+# Upstream does not sign releases.
+debian-watch-does-not-check-openpgp-signature [debian/watch]
+# Not mutually exclusive.
+prefer-uscan-symlink filenamemangle * [debian/watch:*]
+# Markdown, configs or test artifacts.
+very-long-line-length-in-source-file * > * [README.md:*]
+very-long-line-length-in-source-file * > * [test/GH-751/test.txt:*]
+very-long-line-length-in-source-file * > * [test/CVE-2018-25032/fixed.txt:*]
+very-long-line-length-in-source-file * > * [test/CVE-2018-25032/default.txt:*]
+very-long-line-length-in-source-file * > * [.shellcheckrc:*]

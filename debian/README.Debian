@@ -1,0 +1,9 @@
+zlib-ng for Debian
+------------------
+
+This project includes a compatibility mode for zlib, and upstream considers
+API and ABI issues bugs to be fixed. But this needs coordination on how to
+provide that support alongside or instead of zlib. Once that is clear this
+can be reconsidered.
+
+ -- Guillem Jover <guillem@debian.org>  Tue, 24 Sep 2024 19:26:18 +0200
