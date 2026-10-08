@@ -3,6 +3,8 @@
 # Output every command that modifies files on the build system.
 #export DH_VERBOSE = 1
 
+include /usr/share/dpkg/architecture.mk
+
 export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 export DEB_CFLAGS_MAINT_APPEND = -Wall -Wextra
 
@@ -17,8 +19,12 @@ BZ  = $(D)/build-z
 DNG = $(D)/destdir-ng
 DZ  = $(D)/destdir-z
 
+# The zlib compatible library goes in a private directory, so that it can be
+# installed alongside zlib1g and only used by programs that ask for it.
+ZLIBDIR = lib/$(DEB_HOST_MULTIARCH)/zlib-ng
+
 PKGS_NG = -plibz-ng2 -plibz-ng-dev
-PKGS_Z  = -plibz1 -plibz-dev
+PKGS_Z  = -plibz-ng-compat
 
 %:
 	dh $@ --buildsystem=cmake
@@ -34,6 +40,7 @@ override_dh_auto_configure:
 	dh_auto_configure  --builddir=$(BZ) -- \
 	  $(confflags) \
 	  -DZLIB_COMPAT=ON \
+	  -DCMAKE_INSTALL_LIBDIR=$(ZLIBDIR) \
 	  # EOL
 
 override_dh_auto_build:
@@ -43,6 +50,10 @@ override_dh_auto_build:
 override_dh_auto_install:
 	dh_auto_install --builddir=$(BNG) --destdir=$(DNG)
 	dh_auto_install --builddir=$(BZ) --destdir=$(DZ)
+	# Nothing should build against the private library.
+	rm -r $(DZ)/usr/include $(DZ)/usr/$(ZLIBDIR)/libz.a \
+	  $(DZ)/usr/$(ZLIBDIR)/libz.so $(DZ)/usr/$(ZLIBDIR)/pkgconfig \
+	  $(DZ)/usr/$(ZLIBDIR)/cmake
 
 override_dh_install:
 	dh_install --sourcedir=$(DNG) $(PKGS_NG)
@@ -55,6 +66,11 @@ override_dh_auto_test:
 override_dh_missing:
 	dh_missing --sourcedir=$(DNG) $(PKGS_NG)
 	dh_missing --sourcedir=$(DZ) $(PKGS_Z)
+
+# The private library is not in the loader's search path, so it needs neither
+# an ldconfig trigger nor a shlibs file that would offer it to other packages.
+override_dh_makeshlibs:
+	dh_makeshlibs -Nlibz-ng-compat
 
 override_dh_installchangelogs:
 	dh_installchangelogs --no-trim

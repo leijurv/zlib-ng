@@ -1,6 +1,9 @@
 zlib-ng (2.3.3-1~osm1) UNRELEASED; urgency=medium
 
   * New upstream release.
+  * Ship the zlib compatible library as libz-ng-compat, in the private
+    directory /usr/lib/<triplet>/zlib-ng, so that it can be installed
+    alongside zlib1g instead of replacing it. Drop libz1 and libz-dev.
 
  -- Leijurv <leijurv@gmail.com>  Thu, 08 Oct 2026 13:13:08 -0700
 

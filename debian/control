@@ -47,48 +47,20 @@ Description: optimized zlib compression library - development files
  This package contains the header files and the static library needed to
  compile applications that use zlib-ng.
 
-Package: libz1
+Package: libz-ng-compat
 Architecture: any
 Multi-Arch: same
 Depends:
  ${shlibs:Depends},
  ${misc:Depends},
-Conflicts:
- zlib1g,
-Replaces:
- zlib1g,
-Provides:
- zlib1g (= 1:1.3.1),
-Description: optimized API/ABI compatible zlib compression library - shared library
+Description: optimized API/ABI compatible zlib compression library - private library
  zlib-ng is an optimized fork of the zlib library implementing the deflate
  compression method found in gzip and PKZIP.
  .
  It includes and consolidates many optimizations found in alternative forks,
  that have not been merged in the official zlib library.
  .
- This package contains the ABI/API compatible shared library.
-
-Package: libz-dev
-Section: libdevel
-Architecture: any
-Multi-Arch: same
-Depends:
- libz1 (= ${binary:Version}),
- ${misc:Depends},
-Conflicts:
- zlib1g-dev,
-Replaces:
- zlib1g-dev,
-Provides:
- zlib1g-dev (= 1:1.3.1),
-Description: optimized API/ABI compatible zlib compression library - development files
- zlib-ng is an optimized fork of the zlib library implementing the deflate
- compression method found in gzip and PKZIP.
- .
- It includes and consolidates many optimizations found in alternative forks,
- that have not been merged in the official zlib library, while providing a
- cleaned up API, not compatible with zlib, although diverging mostly in the
- symbols being prefixed and some data type improvements.
- .
- This package contains the API/ABI compatible header files and the static
- library needed to compile applications that use zlib.
+ This package contains the ABI/API compatible shared library, installed in
+ the private directory /usr/lib/<triplet>/zlib-ng rather than replacing the
+ system zlib library. Programs only use it when asked to, for example with
+ LD_LIBRARY_PATH=/usr/lib/<triplet>/zlib-ng.
