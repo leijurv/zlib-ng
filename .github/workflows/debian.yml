@@ -1,0 +1,105 @@
+name: Debian packages
+
+on:
+  push:
+    branches: [main]
+    tags: ['debian/**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+            # Only one job needs to produce the source package.
+            build_type: full
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            build_type: any
+    container:
+      image: debian:trixie
+    steps:
+      - name: Install git for checkout
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates git
+        env:
+          DEBIAN_FRONTEND: noninteractive
+
+      - uses: actions/checkout@v4
+
+      - name: Build packages
+        run: |
+          if [ "$GITHUB_REF_TYPE" != tag ]; then
+            # Snapshot builds get a version that sorts after the changelog one.
+            SNAPSHOT_SUFFIX="ci${GITHUB_RUN_NUMBER}.g$(echo "$GITHUB_SHA" | cut -c1-7)"
+            export SNAPSHOT_SUFFIX
+          fi
+          .github/scripts/build-deb.sh
+        env:
+          BUILD_TYPE: ${{ matrix.build_type }}
+
+      - name: Check tag matches debian/changelog version
+        if: github.ref_type == 'tag'
+        run: |
+          version=$(dpkg-parsechangelog -SVersion)
+          # git-buildpackage style tag: debian/<version> with ~ -> _ and : -> %
+          expected="debian/$(echo "$version" | sed -e 's/~/_/g' -e 's/:/%/g')"
+          if [ "$GITHUB_REF_NAME" != "$expected" ]; then
+            echo "::warning::Tag '$GITHUB_REF_NAME' does not match changelog version '$version' (expected '$expected')"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: debian-${{ matrix.arch }}
+          path: |
+            build/*.deb
+            build/*.dsc
+            build/*.tar.*
+            build/*.changes
+            build/*.buildinfo
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    if: github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: debian-*
+          merge-multiple: true
+
+      - name: Upload release assets
+        # GitHub rewrites "~" (and other special characters) in asset names to
+        # ".", which breaks the filenames referenced by the .dsc and .changes
+        # files. Attach the individual files for convenience, plus a tarball
+        # that preserves the exact filenames.
+        run: |
+          ls -l dist
+          bundle="zlib-ng-$(basename "$GITHUB_REF_NAME")-debian13.tar.gz"
+          tar -czf "$bundle" -C dist .
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "$bundle" dist/* --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "$bundle" dist/* \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$GITHUB_REF_NAME" \
+              --generate-notes \
+              --verify-tag
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
